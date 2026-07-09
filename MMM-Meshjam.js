@@ -22,6 +22,7 @@ Module.register("MMM-Meshjam", {
     pollInterval: 1000,    // ms between daemon polls
     alignment: "center",   // left | right | center
     showAttribution: true, // "via <sender>" / "added by <name>"
+    showQueuePosition: true, // "3 of 25 in queue" when the sender reports it
     showQueue: true,       // up-next list with names (house-floor queue)
     // Apple's jam up-next never reaches an AirPlay receiver (protocol
     // limit) — when the floor queue is empty, show recent history instead:
@@ -209,11 +210,19 @@ Module.register("MMM-Meshjam", {
 
   attributionText: function () {
     if (!this.config.showAttribution) { return ""; }
-    if (this.state.airplay && this.state.sender) { return "via " + this.state.sender; }
-    if (this.state.addedBy && this.state.addedBy !== "cli") {
-      return "added by " + this.state.addedBy;
+    var who = "";
+    if (this.state.airplay && this.state.sender) { who = "via " + this.state.sender; }
+    else if (this.state.addedBy && this.state.addedBy !== "cli") {
+      who = "added by " + this.state.addedBy;
     }
-    return "";
+    // Sender-pushed queue position ("3 of 25") — the protocol never
+    // transmits the upcoming titles themselves.
+    if (this.config.showQueuePosition !== false && this.state.queueCount > 0) {
+      var pos = (this.state.queueIndex || 0) + 1 + " of " +
+        this.state.queueCount + " in queue";
+      who = who ? who + "  ·  " + pos : pos;
+    }
+    return who;
   },
 
   updateCardContent: function (needSync) {

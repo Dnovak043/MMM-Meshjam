@@ -216,7 +216,9 @@ module.exports = NodeHelper.create({
         durationMs: 0,
         artworkId: "",
         queue: [],
-        history: []
+        history: [],
+        queueIndex: 0,
+        queueCount: 0
       });
     } finally {
       this.pollInFlight = false;
@@ -397,7 +399,23 @@ module.exports = NodeHelper.create({
 
       artworkId: artworkId,
       queue: queue,
-      history: history
+      history: history,
+
+      /*
+       * Sender-pushed queue position ("track N of M"). The daemon
+       * reports index 0-based, or -1 when unknown; queue contents
+       * themselves are pull-only in the protocol and never sent.
+       */
+      queueIndex: this.firstNumber(
+        airplay.queue_index >= 0
+          ? airplay.queue_index
+          : undefined
+      ),
+
+      queueCount:
+        Number(airplay.queue_count) > 0
+          ? Number(airplay.queue_count)
+          : 0
     };
   },
 
