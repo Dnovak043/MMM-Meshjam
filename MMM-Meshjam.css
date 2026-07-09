@@ -1,0 +1,252 @@
+/* MMM-Meshjam — Apple Music-inspired now-playing card */
+
+/* ---------- Card container ---------- */
+.MMM-Meshjam .airplay-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 330px;
+  padding: 18px 15px 20px;
+  border-radius: 24px;
+  /* Solid translucent fill instead of backdrop-filter blur:
+     blur is re-rasterized every frame during animation and wrecks
+     smoothness on the Pi GPU. On a dark mirror it adds little anyway. */
+  background: rgba(28, 28, 30, 0.92);
+  box-shadow:
+    0 8px 40px rgba(0,0,0,0.55),
+    0 2px 8px rgba(0,0,0,0.35);
+  font-family: -apple-system, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Ambient glow behind the card — driven by a CSS variable set by JS */
+.MMM-Meshjam .airplay-card::before {
+  content: "";
+  position: absolute;
+  inset: -40px;
+  background: radial-gradient(
+    ellipse at 50% 0%,
+    var(--art-glow, rgba(180,100,200,0.25)) 0%,
+    transparent 70%
+  );
+  z-index: 0;
+  pointer-events: none;
+}
+
+.MMM-Meshjam .airplay-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ---------- Album art ---------- */
+.MMM-Meshjam .albumart-wrap {
+  width: 300px;
+  height: 300px;
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 26px;
+  box-shadow:
+    0 20px 60px rgba(0,0,0,0.6),
+    0 4px 16px rgba(0,0,0,0.4);
+  flex-shrink: 0;
+}
+
+.MMM-Meshjam .albumart-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.MMM-Meshjam .albumart-wrap.no-art {
+  background: rgba(255,255,255,0.07);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.MMM-Meshjam .albumart-wrap.no-art::after {
+  content: "♪";
+  font-size: 90px;
+  color: rgba(255,255,255,0.18);
+}
+
+/* ---------- Track info ---------- */
+.MMM-Meshjam .track-info {
+  width: 100%;
+  text-align: left;
+  margin-bottom: 16px;
+}
+
+.MMM-Meshjam .track-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.4px;
+  line-height: 1.18;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 5px;
+}
+
+.MMM-Meshjam .track-artist {
+  font-size: 18px;
+  font-weight: 500;
+  color: #fc3c44;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.MMM-Meshjam .track-album {
+  font-size: 14px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.38);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 3px;
+}
+
+/* ---------- Progress bar (div + transform, GPU-driven) ---------- */
+.MMM-Meshjam .progress-wrap {
+  width: 100%;
+  margin-bottom: 4px;
+}
+
+.MMM-Meshjam .progress-track {
+  position: relative;
+  width: 100%;
+  height: 6px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.MMM-Meshjam .progress-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 100%;
+  background: #ffffff;
+  border-radius: 3px;
+  transform-origin: left center;
+  transform: scaleX(0);
+  will-change: transform;   /* promote to its own compositor layer */
+}
+
+/* ---------- Time labels ---------- */
+.MMM-Meshjam .progress-times {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.45);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.2px;
+  margin-top: 7px;
+}
+
+.MMM-Meshjam .progress-times .paused-badge {
+  color: rgba(255,255,255,0.3);
+  font-style: italic;
+}
+
+/* ---------- Client line ---------- */
+.MMM-Meshjam .client-line {
+  margin-top: 16px;
+  font-size: 13px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.28);
+  letter-spacing: 0.3px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.MMM-Meshjam .client-line::before {
+  content: "▶";
+  font-size: 9px;
+  opacity: 0.5;
+}
+
+/* ============================================================
+   Enter / leave animations  (backInLeft / fadeOutLeft style)
+   Only transform + opacity (compositor-friendly). will-change
+   gives the card its own GPU layer so motion stays smooth.
+   ============================================================ */
+
+@keyframes airplayInLeft {
+  0%   { opacity: 0; transform: translateX(-110%) scale(0.85); }
+  70%  { opacity: 1; transform: translateX(14px)  scale(1.0); }
+  100% { opacity: 1; transform: translateX(0)     scale(1); }
+}
+
+@keyframes airplayOutLeft {
+  0%   { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(-110%); }
+}
+
+.MMM-Meshjam .airplay-card.anim-in {
+  will-change: transform, opacity;
+  animation: airplayInLeft 0.6s cubic-bezier(0.34, 1.30, 0.64, 1) both;
+}
+
+.MMM-Meshjam .airplay-card.anim-out {
+  will-change: transform, opacity;
+  animation: airplayOutLeft 0.45s ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .MMM-Meshjam .airplay-card.anim-in,
+  .MMM-Meshjam .airplay-card.anim-out { animation: none; }
+  .MMM-Meshjam .progress-fill { transition: none !important; }
+}
+
+/* ---------- Jam queue (up next, with names) ---------- */
+.MMM-Meshjam .jam-queue {
+  width: 100%;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,0.10);
+  text-align: left;
+}
+
+.MMM-Meshjam .queue-head {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.30);
+  margin-bottom: 8px;
+}
+
+.MMM-Meshjam .queue-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.MMM-Meshjam .queue-title {
+  color: rgba(255,255,255,0.60);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.MMM-Meshjam .queue-who {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: rgba(255,255,255,0.32);
+  background: rgba(255,255,255,0.08);
+  border-radius: 8px;
+  padding: 1px 8px;
+}
