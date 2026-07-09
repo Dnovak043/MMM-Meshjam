@@ -215,7 +215,8 @@ module.exports = NodeHelper.create({
         positionMs: 0,
         durationMs: 0,
         artworkId: "",
-        queue: []
+        queue: [],
+        history: []
       });
     } finally {
       this.pollInFlight = false;
@@ -317,31 +318,40 @@ module.exports = NodeHelper.create({
       reference.artwork_id
     );
 
+    const rowFromItem = (item) => {
+      const rowItem = item || {};
+      const rowReference = rowItem.ref || {};
+
+      return {
+        title: this.firstString(
+          rowReference.title,
+          rowReference.uri
+        ),
+
+        artist: this.firstString(
+          rowReference.artist
+        ),
+
+        addedBy: this.firstString(
+          rowItem.added_by
+        ),
+
+        kind: this.firstString(
+          rowReference.kind
+        )
+      };
+    };
+
     const queue = Array.isArray(status.queue)
-      ? status.queue.map((item) => {
-          const queueItem = item || {};
-          const queueReference =
-            queueItem.ref || {};
+      ? status.queue.map(rowFromItem)
+      : [];
 
-          return {
-            title: this.firstString(
-              queueReference.title,
-              queueReference.uri
-            ),
-
-            artist: this.firstString(
-              queueReference.artist
-            ),
-
-            addedBy: this.firstString(
-              queueItem.added_by
-            ),
-
-            kind: this.firstString(
-              queueReference.kind
-            )
-          };
-        })
+    /*
+     * Apple's jam up-next never reaches an AirPlay receiver; history
+     * (newest first) feeds the frontend's "Recently played" fallback.
+     */
+    const history = Array.isArray(status.history)
+      ? status.history.slice().reverse().map(rowFromItem)
       : [];
 
     return {
@@ -386,7 +396,8 @@ module.exports = NodeHelper.create({
       ),
 
       artworkId: artworkId,
-      queue: queue
+      queue: queue,
+      history: history
     };
   },
 
