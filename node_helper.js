@@ -98,17 +98,22 @@ module.exports = NodeHelper.create({
       addedBy: cur ? (cur.added_by || "") : "",
       airplay: airplayLive,
       positionMs: pb.position_ms || 0,
-      durationMs: (airplayLive && ap.duration_ms) ? ap.duration_ms
-        : (ref ? (ref.duration_ms || 0) : 0),
+      // the plist-sourced track duration is authoritative; progress-derived
+      // duration can include buffered runway
+      durationMs: (ref && ref.duration_ms) ? ref.duration_ms
+        : ((airplayLive && ap.duration_ms) ? ap.duration_ms : 0),
       artworkId: ap.artwork_id || "",
-      queue: (status.queue || []).map(function (item) {
-        return {
-          title: item.ref.title || item.ref.uri,
-          artist: item.ref.artist || "",
-          addedBy: item.added_by || "",
-          kind: item.ref.kind
-        };
-      })
+      queue: (status.queue || []).map(this.rowFromItem),
+      history: (status.history || []).slice().reverse().map(this.rowFromItem)
+    };
+  },
+
+  rowFromItem: function (item) {
+    return {
+      title: item.ref.title || item.ref.uri,
+      artist: item.ref.artist || "",
+      addedBy: item.added_by || "",
+      kind: item.ref.kind
     };
   },
 

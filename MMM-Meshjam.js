@@ -23,6 +23,9 @@ Module.register("MMM-Meshjam", {
     alignment: "center",   // left | right | center
     showAttribution: true, // "via <sender>" / "added by <name>"
     showQueue: true,       // up-next list with names (house-floor queue)
+    // Apple's jam up-next never reaches an AirPlay receiver (protocol
+    // limit) — when the floor queue is empty, show recent history instead:
+    showHistory: true,
     queueLimit: 4,
     driftResyncSec: 2,     // re-arm the GPU bar only past this drift
     leaveDurationMs: 470
@@ -236,6 +239,12 @@ Module.register("MMM-Meshjam", {
     var box = this.refs.queueEl;
     if (!box) { return; }
     var items = (this.config.showQueue && this.state.queue) ? this.state.queue : [];
+    var heading = "Up next";
+    if (items.length === 0 && this.config.showHistory && this.state.history &&
+        this.state.history.length > 0) {
+      items = this.state.history;   // jam sessions: Apple's up-next is
+      heading = "Recently played";  // invisible to receivers — show history
+    }
     items = items.slice(0, this.config.queueLimit);
     if (items.length === 0) {
       box.style.display = "none";
@@ -246,7 +255,7 @@ Module.register("MMM-Meshjam", {
     box.innerHTML = "";
     var head = document.createElement("div");
     head.className = "queue-head";
-    head.textContent = "Up next";
+    head.textContent = heading;
     box.appendChild(head);
     items.forEach(function (item) {
       var row = document.createElement("div");
